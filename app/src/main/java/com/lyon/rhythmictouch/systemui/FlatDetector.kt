@@ -20,6 +20,11 @@ class FlatDetector(context: Context, private val configBridge: ConfigBridge) : S
         private const val FLAT_CONFIRM_MS = 0L
         private const val PICKUP_CONFIRM_MS = 0L
         private const val SENSOR_DELAY_US = 200_000
+
+        private const val STATIONARY_WINDOW_SIZE = 30
+        private const val STATIONARY_VARIANCE_THRESHOLD = 0.01f
+        private const val STATIONARY_CONFIRM_MS = 8000L
+        private const val MOVING_CONFIRM_MS = 0L
     }
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -39,6 +44,17 @@ class FlatDetector(context: Context, private val configBridge: ConfigBridge) : S
     private var flatSinceMs = 0L
     private var pickupSinceMs = 0L
 
+    private val accelHistory = FloatArray(STATIONARY_WINDOW_SIZE)
+    private var historyIndex = 0
+    private var historyCount = 0
+
+    @Volatile
+    var isStationary = false
+        private set
+
+    private var stationarySinceMs = 0L
+    private var movingSinceMs = 0L
+
     var onStateChanged: ((paused: Boolean) -> Unit)? = null
 
     private var hasStarted = false
@@ -48,8 +64,9 @@ class FlatDetector(context: Context, private val configBridge: ConfigBridge) : S
             RhythmicLog.x(TAG, "No accelerometer available")
             return
         }
-        if (!configBridge.config.flatDetection) {
-            RhythmicLog.x(TAG, "Flat detection disabled in config")
+        val cfg = configBridge.config
+        if (!cfg.flatDetection && !cfg.stationaryDetection) {
+            RhythmicLog.x(TAG, "Both flat and stationary detection disabled")
             return
         }
         try {
@@ -60,7 +77,7 @@ class FlatDetector(context: Context, private val configBridge: ConfigBridge) : S
             }
             sensorManager.registerListener(this, accelerometer, SENSOR_DELAY_US, handler)
             hasStarted = true
-            RhythmicLog.x(TAG, "Started (threshold: XY<${FLAT_THRESHOLD_XY}, Z>${FLAT_THRESHOLD_Z_MIN}, flatConfirm=${FLAT_CONFIRM_MS}ms, pickupConfirm=${PICKUP_CONFIRM_MS}ms)")
+            RhythmicLog.x(TAG, "Started (flat=${cfg.flatDetection}, stationary=${cfg.stationaryDetection})")
         } catch (e: Throwable) {
             RhythmicLog.x(TAG, "Failed to start: ${e.message}")
             hasStarted = false
@@ -76,11 +93,14 @@ class FlatDetector(context: Context, private val configBridge: ConfigBridge) : S
         handler = null
         hasStarted = false
         isFlat = false
+        isStationary = false
         isPaused = false
+        historyCount = 0
     }
 
     fun refreshEnabled() {
-        val enabled = configBridge.config.flatDetection
+        val cfg = configBridge.config
+        val enabled = cfg.flatDetection || cfg.stationaryDetection
         if (enabled && !hasStarted) {
             start()
         } else if (!enabled && hasStarted) {
@@ -90,40 +110,92 @@ class FlatDetector(context: Context, private val configBridge: ConfigBridge) : S
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type != Sensor.TYPE_ACCELEROMETER) return
-        if (!configBridge.config.flatDetection) return
+        val cfg = configBridge.config
 
         val ax = event.values[0]
         val ay = event.values[1]
         val az = event.values[2]
+        val magnitude = kotlin.math.sqrt((ax * ax + ay * ay + az * az).toDouble()).toFloat()
 
         val now = SystemClock.elapsedRealtime()
-        val flatNow = kotlin.math.abs(ax) < FLAT_THRESHOLD_XY &&
-            kotlin.math.abs(ay) < FLAT_THRESHOLD_XY &&
-            az > FLAT_THRESHOLD_Z_MIN
 
-        if (flatNow) {
-            if (!isFlat) {
-                isFlat = true
-                flatSinceMs = now
-                pickupSinceMs = 0L
-                RhythmicLog.d(TAG, "📱 Device went flat: ax=${"%.1f".format(ax)} ay=${"%.1f".format(ay)} az=${"%.1f".format(az)}")
-            } else if (!isPaused && now - flatSinceMs >= FLAT_CONFIRM_MS) {
-                isPaused = true
-                RhythmicLog.x(TAG, "⏸️ Flat confirmed, pausing vibration after ${FLAT_CONFIRM_MS}ms")
-                onStateChanged?.invoke(true)
+        var changed = false
+
+        if (cfg.flatDetection) {
+            val flatNow = kotlin.math.abs(ax) < FLAT_THRESHOLD_XY &&
+                kotlin.math.abs(ay) < FLAT_THRESHOLD_XY &&
+                az > FLAT_THRESHOLD_Z_MIN
+
+            if (flatNow) {
+                if (!isFlat) {
+                    isFlat = true
+                    flatSinceMs = now
+                    pickupSinceMs = 0L
+                    RhythmicLog.d(TAG, "📱 Device went flat: ax=${"%.1f".format(ax)} ay=${"%.1f".format(ay)} az=${"%.1f".format(az)}")
+                } else if (!isFlat) {
+                }
+            } else {
+                if (isFlat) {
+                    isFlat = false
+                    pickupSinceMs = now
+                    flatSinceMs = 0L
+                    RhythmicLog.d(TAG, "📱 Device picked up: ax=${"%.1f".format(ax)} ay=${"%.1f".format(ay)} az=${"%.1f".format(az)}")
+                }
             }
-        } else {
-            if (isFlat) {
-                isFlat = false
-                pickupSinceMs = now
-                flatSinceMs = 0L
-                RhythmicLog.d(TAG, "📱 Device picked up: ax=${"%.1f".format(ax)} ay=${"%.1f".format(ay)} az=${"%.1f".format(az)}")
-            } else if (isPaused && pickupSinceMs > 0L && now - pickupSinceMs >= PICKUP_CONFIRM_MS) {
-                isPaused = false
-                pickupSinceMs = 0L
-                RhythmicLog.x(TAG, "▶️ Pick-up confirmed, resuming vibration after ${PICKUP_CONFIRM_MS}ms")
-                onStateChanged?.invoke(false)
+        }
+
+        if (cfg.stationaryDetection) {
+            accelHistory[historyIndex] = magnitude
+            historyIndex = (historyIndex + 1) % STATIONARY_WINDOW_SIZE
+            if (historyCount < STATIONARY_WINDOW_SIZE) historyCount++
+
+            if (historyCount >= STATIONARY_WINDOW_SIZE) {
+                var sum = 0f
+                for (i in 0 until historyCount) sum += accelHistory[i]
+                val mean = sum / historyCount
+                var variance = 0f
+                for (i in 0 until historyCount) {
+                    val d = accelHistory[i] - mean
+                    variance += d * d
+                }
+                variance /= historyCount
+
+                val isStill = variance < STATIONARY_VARIANCE_THRESHOLD
+
+                if (isStill) {
+                    if (!isStationary) {
+                        if (stationarySinceMs == 0L) stationarySinceMs = now
+                        if (now - stationarySinceMs >= STATIONARY_CONFIRM_MS) {
+                            isStationary = true
+                            RhythmicLog.x(TAG, "⏸️ Stationary confirmed (var=${"%.4f".format(variance)})")
+                            changed = true
+                        }
+                    }
+                    movingSinceMs = 0L
+                } else {
+                    if (isStationary) {
+                        if (movingSinceMs == 0L) movingSinceMs = now
+                        if (now - movingSinceMs >= MOVING_CONFIRM_MS) {
+                            isStationary = false
+                            stationarySinceMs = 0L
+                            RhythmicLog.x(TAG, "▶️ Moving confirmed, resuming (var=${"%.4f".format(variance)})")
+                            changed = true
+                        }
+                    } else {
+                        stationarySinceMs = 0L
+                    }
+                }
             }
+        }
+
+        val shouldBePaused = isFlat || isStationary
+        if (shouldBePaused != isPaused) {
+            isPaused = shouldBePaused
+            changed = true
+        }
+
+        if (changed) {
+            onStateChanged?.invoke(isPaused)
         }
     }
 

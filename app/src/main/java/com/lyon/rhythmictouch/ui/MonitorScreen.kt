@@ -110,6 +110,8 @@ fun MonitorScreen(
 
 @Composable
 private fun LiveIndicator() {
+    val context = LocalContext.current
+    val hideEmptyBands = remember { context.getSharedPreferences(RhythmicConstants.PREF_NAME, android.content.Context.MODE_PRIVATE).getBoolean(RhythmicConstants.KEY_HIDE_EMPTY_BANDS, RhythmicConstants.DEFAULT_HIDE_EMPTY_BANDS) }
     var level by remember { mutableFloatStateOf(0f) }
     var bands by remember { mutableStateOf(emptyList<SpectrumBand>()) }
     var beat by remember { mutableStateOf(false) }
@@ -118,6 +120,7 @@ private fun LiveIndicator() {
     var activeApp by remember { mutableStateOf<String?>(null) }
     var engineActive by remember { mutableStateOf(false) }
     var vibrationMode by remember { mutableStateOf("") }
+    var lastBands by remember { mutableStateOf(emptyList<SpectrumBand>()) }
     val defaultBands = defaultBandsCache
 
     LaunchedEffect(Unit) {
@@ -126,6 +129,7 @@ private fun LiveIndicator() {
             if (newLevel != level) level = newLevel
             val newBands = LiveState.bands
             if (newBands != bands) bands = newBands
+            if (newBands.isNotEmpty()) lastBands = newBands
             val newBeat = LiveState.beat
             if (newBeat != beat) beat = newBeat
             val newPeak = LiveState.peakBandIndex
@@ -191,10 +195,14 @@ private fun LiveIndicator() {
 
         Spacer(Modifier.height(12.dp))
 
-        val displayBands = if (bands.isEmpty()) {
+        val sourceBands = if (bands.isNotEmpty()) bands else lastBands
+        val displayBands = if (sourceBands.isEmpty()) {
             defaultBands
+        } else if (hideEmptyBands) {
+            val filtered = sourceBands.filter { it.value > 0.001f }
+            if (filtered.isEmpty()) sourceBands else filtered
         } else {
-            bands
+            sourceBands
         }
         
         SpectrumGrid(bands = displayBands, peakBandIndex = peakBandIndex)

@@ -112,7 +112,11 @@
     <string name="setting_whitelist_on">白名单：仅作用域中的应用触发振动</string>
     <string name="setting_whitelist_off">黑名单：作用域中的应用不触发振动</string>
     <string name="setting_flat_detection">平放检测</string>
-    <string name="setting_flat_detection_desc">设备平放时自动暂停振动，拿起后恢复。平放5秒后暂停，拿起2秒后恢复</string>
+    <string name="setting_flat_detection_desc">设备平放时自动暂停振动，拿起后立即恢复</string>
+    <string name="setting_stationary_detection">静止检测</string>
+    <string name="setting_stationary_detection_desc">手机静止不动时自动暂停振动，拿起或移动后恢复</string>
+    <string name="setting_hide_empty_bands">隐藏空频段</string>
+    <string name="setting_hide_empty_bands_desc">过滤掉没有FFT数据的频段，只显示有效的频率区间</string>
     <string name="setting_monet">全局莫奈取色</string>
     <string name="setting_monet_desc">使用系统 Material You 动态取色</string>
     <string name="setting_vibration_intensity">振动强度</string>

@@ -64,6 +64,12 @@ object RhythmicConstants {
     const val KEY_FLAT_DETECTION = "flat_detection"
     const val DEFAULT_FLAT_DETECTION = false
 
+    const val KEY_STATIONARY_DETECTION = "stationary_detection"
+    const val DEFAULT_STATIONARY_DETECTION = false
+
+    const val KEY_HIDE_EMPTY_BANDS = "hide_empty_bands"
+    const val DEFAULT_HIDE_EMPTY_BANDS = false
+
     const val ACTION_REQUEST_DETECTED_INTERVAL = "com.lyon.rhythmictouch.ACTION_REQUEST_DETECTED_INTERVAL"
     const val EXTRA_SYNC_ENABLED = "sync_enabled"
 
