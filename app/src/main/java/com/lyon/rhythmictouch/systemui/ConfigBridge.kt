@@ -52,6 +52,7 @@ class ConfigBridge(context: Context) {
         syncAaudioWithAudioTrack = cachePrefs.getBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK),
         quietPeriods = QuietPeriod.fromJsonList(cachePrefs.getString("quiet_periods_json", null)),
         flatDetection = cachePrefs.getBoolean(RhythmicConstants.KEY_FLAT_DETECTION, RhythmicConstants.DEFAULT_FLAT_DETECTION),
+        stationaryDetection = cachePrefs.getBoolean(RhythmicConstants.KEY_STATIONARY_DETECTION, RhythmicConstants.DEFAULT_STATIONARY_DETECTION),
     )
 
     fun writeCache(config: RhythmicConfig) {
@@ -72,6 +73,7 @@ class ConfigBridge(context: Context) {
                 .putBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, config.syncAaudioWithAudioTrack)
                 .putString("quiet_periods_json", QuietPeriod.toJsonList(config.quietPeriods))
                 .putBoolean(RhythmicConstants.KEY_FLAT_DETECTION, config.flatDetection)
+                .putBoolean(RhythmicConstants.KEY_STATIONARY_DETECTION, config.stationaryDetection)
                 .apply()
         } catch (_: Throwable) {}
     }
