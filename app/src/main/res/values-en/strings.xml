@@ -111,6 +111,12 @@
     <string name="setting_whitelist_mode">Scope Whitelist Mode</string>
     <string name="setting_whitelist_on">Whitelist: Only scoped apps trigger vibration</string>
     <string name="setting_whitelist_off">Blacklist: Scoped apps will not trigger vibration</string>
+    <string name="setting_flat_detection">Flat Detection</string>
+    <string name="setting_flat_detection_desc">Auto-pause vibration when device is lying flat, resume immediately when picked up</string>
+    <string name="setting_stationary_detection">Stationary Detection</string>
+    <string name="setting_stationary_detection_desc">Auto-pause vibration when device is stationary, resume when moved</string>
+    <string name="setting_hide_empty_bands">Hide Empty Bands</string>
+    <string name="setting_hide_empty_bands_desc">Filter out frequency bands with no FFT data, showing only active frequency ranges</string>
     <string name="setting_monet">Global Monet Theming</string>
     <string name="setting_monet_desc">Use system Material You dynamic colors</string>
     <string name="setting_vibration_intensity">Vibration Intensity</string>

@@ -18,6 +18,8 @@ data class RhythmicConfig(
     val aaudioIntervalMs: Int = RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS,
     val syncAaudioWithAudioTrack: Boolean = RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK,
     val quietPeriods: List<QuietPeriod> = emptyList(),
+    val flatDetection: Boolean = RhythmicConstants.DEFAULT_FLAT_DETECTION,
+    val stationaryDetection: Boolean = RhythmicConstants.DEFAULT_STATIONARY_DETECTION,
 ) {
     fun toBundle(): Bundle = Bundle().apply {
         putBoolean(RhythmicConstants.KEY_ENABLED, enabled)
@@ -34,6 +36,8 @@ data class RhythmicConfig(
         putInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, aaudioIntervalMs)
         putBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, syncAaudioWithAudioTrack)
         putString("quiet_periods_json", QuietPeriod.toJsonList(quietPeriods))
+        putBoolean(RhythmicConstants.KEY_FLAT_DETECTION, flatDetection)
+        putBoolean(RhythmicConstants.KEY_STATIONARY_DETECTION, stationaryDetection)
     }
 
     companion object {
@@ -55,6 +59,8 @@ data class RhythmicConfig(
                 aaudioIntervalMs = bundle.getInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS).coerceIn(33, 300),
                 syncAaudioWithAudioTrack = bundle.getBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK),
                 quietPeriods = QuietPeriod.fromJsonList(bundle.getString("quiet_periods_json")),
+                flatDetection = bundle.getBoolean(RhythmicConstants.KEY_FLAT_DETECTION, RhythmicConstants.DEFAULT_FLAT_DETECTION),
+                stationaryDetection = bundle.getBoolean(RhythmicConstants.KEY_STATIONARY_DETECTION, RhythmicConstants.DEFAULT_STATIONARY_DETECTION),
             )
         }
     }

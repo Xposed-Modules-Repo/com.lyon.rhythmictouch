@@ -72,6 +72,8 @@ fun SettingsScreen(
     var showLanguageDialog by remember { mutableStateOf(false) }
     var currentLanguage by remember { mutableStateOf(LocaleHelper.getSavedLanguage(context)) }
     val activity = LocalContext.current as? android.app.Activity
+    val hideEmptyBandsPrefs = remember { context.getSharedPreferences(RhythmicConstants.PREF_NAME, android.content.Context.MODE_PRIVATE) }
+    var hideEmptyBands by remember { mutableStateOf(hideEmptyBandsPrefs.getBoolean(RhythmicConstants.KEY_HIDE_EMPTY_BANDS, RhythmicConstants.DEFAULT_HIDE_EMPTY_BANDS)) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -217,6 +219,38 @@ fun SettingsScreen(
                 } else {
                     stringResource(R.string.setting_whitelist_off)
                 },
+            )
+
+            SuperSwitch(
+                checked = config.value.flatDetection,
+                onCheckedChange = { checked ->
+                    config.value = config.value.copy(flatDetection = checked)
+                    store.write(config.value)
+                    context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG))
+                },
+                title = stringResource(R.string.setting_flat_detection),
+                summary = stringResource(R.string.setting_flat_detection_desc),
+            )
+
+            SuperSwitch(
+                checked = config.value.stationaryDetection,
+                onCheckedChange = { checked ->
+                    config.value = config.value.copy(stationaryDetection = checked)
+                    store.write(config.value)
+                    context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG))
+                },
+                title = stringResource(R.string.setting_stationary_detection),
+                summary = stringResource(R.string.setting_stationary_detection_desc),
+            )
+
+            SuperSwitch(
+                checked = hideEmptyBands,
+                onCheckedChange = { checked ->
+                    hideEmptyBands = checked
+                    hideEmptyBandsPrefs.edit().putBoolean(RhythmicConstants.KEY_HIDE_EMPTY_BANDS, checked).apply()
+                },
+                title = stringResource(R.string.setting_hide_empty_bands),
+                summary = stringResource(R.string.setting_hide_empty_bands_desc),
             )
 
             SuperSwitch(

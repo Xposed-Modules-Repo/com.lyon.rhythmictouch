@@ -17,6 +17,8 @@ class ConfigStore(context: Context) {
         aaudioIntervalMs = prefs.getInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS).coerceIn(33, 300),
         syncAaudioWithAudioTrack = prefs.getBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK),
         quietPeriods = QuietPeriod.fromJsonList(prefs.getString("quiet_periods_json", null)),
+        flatDetection = prefs.getBoolean(RhythmicConstants.KEY_FLAT_DETECTION, RhythmicConstants.DEFAULT_FLAT_DETECTION),
+        stationaryDetection = prefs.getBoolean(RhythmicConstants.KEY_STATIONARY_DETECTION, RhythmicConstants.DEFAULT_STATIONARY_DETECTION),
     )
 
     fun write(config: RhythmicConfig) {
@@ -31,6 +33,8 @@ class ConfigStore(context: Context) {
             .putInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, config.aaudioIntervalMs)
             .putBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, config.syncAaudioWithAudioTrack)
             .putString("quiet_periods_json", QuietPeriod.toJsonList(config.quietPeriods))
+            .putBoolean(RhythmicConstants.KEY_FLAT_DETECTION, config.flatDetection)
+            .putBoolean(RhythmicConstants.KEY_STATIONARY_DETECTION, config.stationaryDetection)
             .apply()
     }
 }
